@@ -18,30 +18,58 @@ export interface MarketProps {
 export default function Home() {
   const { polymarket, account, loadWeb3, loading } = useData();
   const [markets, setMarkets] = useState<MarketProps[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   const getMarkets = useCallback(async () => {
-    var totalQuestions = await polymarket.methods
-      .totalQuestions()
-      .call({ from: account });
-    var dataArray: MarketProps[] = [];
-    for (var i = 0; i < totalQuestions; i++) {
-      var data = await polymarket.methods.questions(i).call({ from: account });
-      dataArray.push({
-        id: data.id,
-        title: data.question,
-        imageHash: data.creatorImageHash,
-        totalAmount: data.totalAmount,
-        totalYes: data.totalYesAmount,
-        totalNo: data.totalNoAmount,
-      });
+    try {
+      const totalQuestions = await polymarket.methods
+        .totalQuestions()
+        .call({ from: account });
+
+      const dataArray: MarketProps[] = [];
+      for (let i = 0; i < totalQuestions; i++) {
+        const data = await polymarket.methods.questions(i).call({ from: account });
+        dataArray.push({
+          id: data.id,
+          title: data.question,
+          imageHash: data.creatorImageHash,
+          totalAmount: data.totalAmount,
+          totalYes: data.totalYesAmount,
+          totalNo: data.totalNoAmount,
+        });
+      }
+      // setMarkets(dataArray);
+      const dummyData = [
+        {
+          id: "123123",
+          title: "Question",
+          imageHash: "imageHash",
+          totalAmount: "100",
+          totalYes: "5",
+          totalNo: "6",
+        }
+      ]
+      setMarkets(dummyData)
+      console.log('dummyData', dummyData)
+
+    } catch (err) {
+      console.error("Error fetching markets:", err);
+      setError("Failed to fetch markets. Please try again later.");
     }
-    setMarkets(dataArray);
   }, [account, polymarket]);
 
   useEffect(() => {
-    loadWeb3().then(() => {
-      if (!loading) getMarkets();
-    });
+    const load = async () => {
+      try {
+        await loadWeb3();
+        if (!loading) getMarkets();
+      } catch (err) {
+        console.error("Error loading Web3:", err);
+        setError("Failed to load Web3. Please try again later.");
+      }
+    };
+
+    load();
   }, [loading]);
 
   return (
@@ -91,9 +119,11 @@ export default function Home() {
             />
           </div>
           <span className="font-bold my-3 text-lg">Market</span>
-          <div className="flex flex-wrap overflow-hidden sm:-mx-1 md:-mx-2">
-            {markets.map((market) => {
-              return (
+          {error ? (
+            <div className="text-red-500">{error}</div>
+          ) : (
+            <div className="flex flex-wrap overflow-hidden sm:-mx-1 md:-mx-2">
+              {markets.map((market) => (
                 <MarketCard
                   id={market.id}
                   key={market.id}
@@ -103,9 +133,9 @@ export default function Home() {
                   totalNo={market.totalNo}
                   imageHash={market.imageHash}
                 />
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </main>
     </div>

@@ -31,49 +31,59 @@ export const useData = () => useContext<DataContextProps>(DataContext);
 export const useProviderData = () => {
   const [loading, setLoading] = useState(true);
   const [account, setAccount] = useState("");
-  const [polymarket, setPolymarket] = useState<any>();
-  const [polyToken, setPolyToken] = useState<any>();
+  const [polymarket, setPolymarket] = useState<any>(null);
+  const [polyToken, setPolyToken] = useState<any>(null);
 
   const loadWeb3 = async () => {
-    if (window.ethereum) {
-      window.web3 = new Web3(window.ethereum);
-      await window.ethereum.enable();
-    } else if (window.web3) {
-      window.web3 = new Web3(window.web3.currentProvider);
-    } else {
-      window.alert("Non-Eth browser detected. Please consider using MetaMask.");
-      return;
+    try {
+      if (window.ethereum) {
+        window.web3 = new Web3(window.ethereum);
+        await window.ethereum.enable();
+      } else if (window.web3) {
+        window.web3 = new Web3(window.web3.currentProvider);
+      } else {
+        window.alert("Non-Eth browser detected. Please consider using MetaMask.");
+        return;
+      }
+
+      const allAccounts = await window.web3.eth.getAccounts();
+      setAccount(allAccounts[0]);
+      await loadBlockchainData();
+    } catch (error) {
+      console.error("Error loading Web3: ", error);
+      window.alert("An error occurred while loading Web3. Please try again.");
+      setLoading(false);
     }
-    var allAccounts = await window.web3.eth.getAccounts();
-    setAccount(allAccounts[0]);
-    await loadBlockchainData();
   };
 
   const loadBlockchainData = async () => {
-    const web3 = window.web3;
+    try {
+      const web3 = window.web3;
 
-    const polymarketData = Polymarket.networks["80001"];
-    const polyTokenData = PolyToken.networks["80001"];
+      const polymarketData = Polymarket.networks["80001"];
+      const polyTokenData = PolyToken.networks["80001"];
 
-    if (polymarketData && polyTokenData) {
-      var tempContract = await new web3.eth.Contract(
-        Polymarket.abi,
-        polymarketData.address
-      );
-      setPolymarket(tempContract);
-      console.log(tempContract);
-      var tempTokenContract = await new web3.eth.Contract(
-        PolyToken.abi,
-        polyTokenData.address
-      );
+      if (polymarketData && polyTokenData) {
+        const tempContract = new web3.eth.Contract(
+          Polymarket.abi,
+          polymarketData.address
+        );
+        setPolymarket(tempContract);
 
-      setPolyToken(tempTokenContract);
-    } else {
-      window.alert("TestNet not found");
-    }
-    setTimeout(() => {
+        const tempTokenContract = new web3.eth.Contract(
+          PolyToken.abi,
+          polyTokenData.address
+        );
+        setPolyToken(tempTokenContract);
+      } else {
+        window.alert("TestNet not found");
+      }
+    } catch (error) {
+      console.error("Error loading blockchain data: ", error);
+      window.alert("An error occurred while loading blockchain data. Please try again.");
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
 
   return {
