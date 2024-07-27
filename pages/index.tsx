@@ -22,36 +22,23 @@ export default function Home() {
 
   const getMarkets = useCallback(async () => {
     try {
-      const totalQuestions = await polymarket.methods
-        .totalQuestions()
-        .call({ from: account });
-
-      const dataArray: MarketProps[] = [];
-      for (let i = 0; i < totalQuestions; i++) {
-        const data = await polymarket.methods.questions(i).call({ from: account });
-        dataArray.push({
-          id: data.id,
-          title: data.question,
-          imageHash: data.creatorImageHash,
-          totalAmount: data.totalAmount,
-          totalYes: data.totalYesAmount,
-          totalNo: data.totalNoAmount,
-        });
-      }
-      // setMarkets(dataArray);
-      const dummyData = [
+      const totalAAmount = await polymarket.methods
+        .currentTotalAAmount()
+        .call();
+      const totalBAmount = await polymarket.methods
+        .currentTotalBAmount()
+        .call();
+      const dataArray: MarketProps[] = [
         {
-          id: "123123",
-          title: "Question",
-          imageHash: "imageHash",
-          totalAmount: "100",
-          totalYes: "5",
-          totalNo: "6",
-        }
-      ]
-      setMarkets(dummyData)
-      console.log('dummyData', dummyData)
-
+          id: "5",
+          title: "my title",
+          imageHash: "aabbcc",
+          totalAmount: (totalAAmount + totalBAmount).toString(),
+          totalYes: "213",
+          totalNo: "234",
+        },
+      ];
+      setMarkets(dataArray);
     } catch (err) {
       console.error("Error fetching markets:", err);
       setError("Failed to fetch markets. Please try again later.");
