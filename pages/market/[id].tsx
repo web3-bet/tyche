@@ -1,10 +1,10 @@
+"use client";
 import moment from "moment";
 import Head from "next/head";
 import Img from "next/image";
 import { useRouter } from "next/router";
 import React, { useCallback, useEffect, useState } from "react";
 import Web3 from "web3";
-import ChartContainer from "../../components/Chart/ChartContainer";
 import Navbar from "../../components/Navbar";
 import { useData } from "../../contexts/DataContext";
 
@@ -23,7 +23,7 @@ export interface MarketProps {
 const Details = () => {
   const router = useRouter();
   const { id } = router.query;
-  const { polymarket, account, loadWeb3, loading, polyToken } = useData();
+  const { polymarket, account, loadWeb3, loading } = useData();
   const [market, setMarket] = useState<MarketProps>();
   const [selected, setSelected] = useState<string>("YES");
   const [dataLoading, setDataLoading] = useState(true);
@@ -32,43 +32,43 @@ const Details = () => {
   const [input, setInput] = useState("");
 
   const getMarketData = useCallback(async () => {
-    var data = await polymarket.methods.questions(id).call({ from: account });
+    const totalAAmount = await polymarket.methods.currentTotalAAmount().call();
+    const totalBAmount = await polymarket.methods.currentTotalBAmount().call();
     setMarket({
-      id: data.id,
-      title: data.question,
-      imageHash: data.creatorImageHash,
-      totalAmount: parseInt(data.totalAmount),
-      totalYes: parseInt(data.totalYesAmount),
-      totalNo: parseInt(data.totalNoAmount),
-      description: data.description,
-      endTimestamp: parseInt(data.endTimestamp),
-      resolverUrl: data.resolverUrl,
+      id: "123",
+      title: "title 1",
+      imageHash: "aabbcc",
+      totalAmount: parseInt(totalAAmount) + parseInt(totalBAmount),
+      totalYes: parseInt(totalAAmount),
+      totalNo: parseInt(totalBAmount),
+      description: "foo description",
+      endTimestamp: parseInt(new Date().getTime().toString()),
+      resolverUrl: "foo",
     });
     setDataLoading(false);
   }, [account, id, polymarket]);
 
   const handleTrade = async () => {
-    var bal = await polyToken.methods.balanceOf(account).call();
     setButton("Please wait");
 
-    if (input && selected === "YES") {
-      if (parseInt(input) < parseInt(Web3.utils.fromWei(bal, "ether"))) {
-        await polyToken.methods
-          .approve(polymarket._address, Web3.utils.toWei(input, "ether"))
-          .send({ from: account });
-        await polymarket.methods
-          .addYesBet(id, Web3.utils.toWei(input, "ether"))
-          .send({ from: account });
-      }
+    if (Number.isNaN(parseInt(input)) || parseFloat(input) <= 0) {
+      throw new Error("Invalid input");
+    }
+
+    if (selected === "YES") {
+      const receipt = await polymarket.methods.betA().send({
+        from: account,
+        value: input,
+        gas: 2000000, // Set an appropriate gas limit
+      });
+      console.log("Receipt: ", receipt);
     } else if (input && selected === "NO") {
-      if (parseInt(input) < parseInt(Web3.utils.fromWei(bal, "ether"))) {
-        await polyToken.methods
-          .approve(polymarket._address, Web3.utils.toWei(input, "ether"))
-          .send({ from: account });
-        await polymarket.methods
-          .addNoBet(id, Web3.utils.toWei(input, "ether"))
-          .send({ from: account });
-      }
+      const receipt = await polymarket.methods.betB().send({
+        from: account,
+        value: input,
+        gas: 2000000, // Set an appropriate gas limit
+      });
+      console.log("Receipt: ", receipt);
     }
     await getMarketData();
     setButton("Trade");
@@ -146,7 +146,7 @@ const Details = () => {
             <div className="flex flex-col space-y-3">
               <div className="w-full flex flex-row mt-5">
                 <div className="w-2/3 border rounded-lg p-1 pb-4 border-gray-300 mr-2">
-                  <ChartContainer questionId={market?.id ?? "0"} />
+                  CHART HERE
                 </div>
                 <div className="w-1/3 rounded-lg border border-gray-300 ml-2">
                   <div className="flex flex-col items-start p-6">

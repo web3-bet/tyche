@@ -34,8 +34,8 @@ export default function Home() {
           title: "my title",
           imageHash: "aabbcc",
           totalAmount: (totalAAmount + totalBAmount).toString(),
-          totalYes: "213",
-          totalNo: "234",
+          totalYes: totalAAmount.toString(),
+          totalNo: totalBAmount.toString(),
         },
       ];
       setMarkets(dataArray);
