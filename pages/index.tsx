@@ -10,34 +10,40 @@ export interface MarketProps {
   id: string;
   title: string;
   imageHash: string;
-  totalAmount: string;
-  totalYes: string;
-  totalNo: string;
+  totalAmount: number;
+  totalYes: number;
+  totalNo: number;
+  aTitle: string;
+  bTitle: string;
+  description: string;
 }
 
 export default function Home() {
-  const { polymarket, account, loadWeb3, loading } = useData();
+  const { polymarket, account, loadWeb3, loading, getBets } = useData();
   const [markets, setMarkets] = useState<MarketProps[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const getMarkets = useCallback(async () => {
     try {
-      const totalAAmount = await polymarket.methods
-        .currentTotalAAmount()
-        .call();
-      const totalBAmount = await polymarket.methods
-        .currentTotalBAmount()
-        .call();
-      const dataArray: MarketProps[] = [
-        {
-          id: "5",
-          title: "my title",
-          imageHash: "aabbcc",
-          totalAmount: (totalAAmount + totalBAmount).toString(),
-          totalYes: totalAAmount.toString(),
-          totalNo: totalBAmount.toString(),
-        },
-      ];
+      const bets = await getBets();
+      console.log("bets", bets);
+      const dataArray: MarketProps[] = Object.keys(bets).map(
+        (id): MarketProps => {
+          const bet = bets[parseInt(id)];
+          console.log("bet data for id", id, bet);
+          return {
+            id,
+            title: bet.title,
+            imageHash: bet.imageHash,
+            totalAmount: bet.currentTotalAAmount + bet.currentTotalBAmount,
+            totalYes: bet.currentTotalAAmount,
+            totalNo: bet.currentTotalBAmount,
+            aTitle: bet.optionATitle,
+            bTitle: bet.optionBTitle,
+            description: bet.description,
+          };
+        }
+      );
       setMarkets(dataArray);
     } catch (err) {
       console.error("Error fetching markets:", err);
@@ -119,6 +125,9 @@ export default function Home() {
                   totalYes={market.totalYes}
                   totalNo={market.totalNo}
                   imageHash={market.imageHash}
+                  aTitle={market.aTitle}
+                  bTitle={market.bTitle}
+                  description={market.description}
                 />
               ))}
             </div>

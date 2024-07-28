@@ -6,7 +6,7 @@ interface Props {
   id: string;
   title: string;
   imageHash: string;
-  totalAmount: string;
+  totalAmount: number;
   onYes: () => void;
   onNo: () => void;
 }
@@ -24,7 +24,7 @@ export const AdminMarketCard: React.FC<Props> = ({
         <div className="flex flex-row space-x-5 pb-4">
           <div className="h-w-15">
             <Img
-              src={`https://ipfs.infura.io/ipfs/${imageHash}`}
+              src={`${imageHash}`}
               className="rounded-full"
               width={55}
               height={55}
@@ -38,7 +38,9 @@ export const AdminMarketCard: React.FC<Props> = ({
               Total Liquidity
             </span>
             <span className="text-base">
-              {parseFloat(Web3.utils.fromWei(totalAmount, "ether")).toFixed(2)}{" "}
+              {parseFloat(
+                Web3.utils.fromWei(totalAmount.toString(), "ether")
+              ).toFixed(2)}{" "}
               POLY
             </span>
           </div>

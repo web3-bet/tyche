@@ -5,98 +5,96 @@ import Navbar from "../components/Navbar";
 import { PortfolioMarketCard } from "../components/PortfolioMarketCard";
 import { useData } from "../contexts/DataContext";
 import styles from "../styles/Home.module.css";
+import { orderBy } from "lodash";
 
 export interface MarketProps {
-  id: string;
+  id: number;
   title?: string;
+  description?: string;
+  atitle?: string;
+  btitle?: string;
   imageHash?: string;
-  totalAmount?: string;
-  totalYes?: string;
-  totalNo?: string;
+  totalAmount?: number;
+  totalYes?: number;
+  totalNo?: number;
   userYes?: string;
-  hasResolved?: boolean;
+  averageBuyPrice?: string;
   userNo?: string;
-  timestamp?: string;
-  endTimestamp?: string;
 }
 
 export interface QuestionsProps {
-  id: string;
+  id: number;
   title?: string;
+  description?: string;
+  aTitle?: string;
+  bTitle?: string;
   imageHash?: string;
-  totalAmount?: string;
-  totalYes?: string;
-  totalNo?: string;
-  hasResolved?: boolean;
-  endTimestamp?: string;
+  totalAmount?: number;
+  totalYes?: number;
+  totalNo?: number;
+  averageBuyPrice?: string;
 }
 
 const Portfolio = () => {
-  const { polymarket, account, loadWeb3, loading } = useData();
+  const { polymarket, account, loadWeb3, loading, getBets, getUserBets } =
+    useData();
   const [markets, setMarkets] = useState<MarketProps[]>([]);
   const [portfolioValue, setPortfolioValue] = useState<number>(0);
   const [allQuestions, setAllQuestions] = useState<QuestionsProps[]>([]);
   const [openPositions, setOpenPositions] = useState<number>(0);
 
   const getMarkets = useCallback(async () => {
-    var totalQuestions = await polymarket.methods
-      .totalQuestions()
-      .call({ from: account });
-    for (var i = 0; i < totalQuestions; i++) {
-      var questions = await polymarket.methods
-        .questions(i)
-        .call({ from: account });
+    var bets = await getBets();
+    console.log("get all markets in portfolio", bets);
+    var allQuestions: QuestionsProps[] = [];
+    for (var i = 1; i < Object.keys(bets).length + 1; i++) {
+      var bet = bets[i];
       allQuestions.push({
-        id: questions.id,
-        title: questions.question,
-        imageHash: questions.creatorImageHash,
-        totalAmount: questions.totalAmount,
-        totalYes: questions.totalYesAmount,
-        totalNo: questions.totalNoAmount,
-        hasResolved: questions.eventCompleted,
-        endTimestamp: questions.endTimestamp,
+        id: i,
+        title: bet.title,
+        imageHash: bet.imageHash ?? undefined,
+        totalAmount: bet.currentTotalAAmount + bet.currentTotalBAmount,
+        totalYes: bet.currentTotalAAmount,
+        totalNo: bet.currentTotalBAmount,
+        description: bet.description,
+        aTitle: bet.optionATitle,
+        bTitle: bet.optionBTitle,
       });
     }
 
     var dataArray: MarketProps[] = [];
     var totalPortValue = 0;
-    for (var i = 0; i < totalQuestions; i++) {
-      var data = await polymarket.methods
-        .getGraphData(i)
-        .call({ from: account });
-      data["0"].forEach((item: any) => {
-        if (item[0] == account) {
-          dataArray.push({
-            id: i.toString(),
-            userYes: item[1].toString(),
-            timestamp: item[2].toString(),
-          });
-          totalPortValue += parseInt(item[1]);
-        }
+    var resp = await getUserBets(account);
+    console.log("resp", resp);
+    resp.abets.forEach((bet) => {
+      dataArray.push({
+        id: bet.betId,
+        userYes: bet.amount.toString(),
+        averageBuyPrice: bet.averageRatio.toString(),
       });
-      data["1"].forEach((item: any) => {
-        if (item[0] == account) {
-          dataArray.push({
-            id: i.toString(),
-            userNo: item[1].toString(),
-            timestamp: item[2].toString(),
-          });
-          totalPortValue += parseInt(item[1]);
-        }
+      totalPortValue += bet.amount;
+    });
+    resp.bbets.forEach((bet) => {
+      dataArray.push({
+        id: bet.betId,
+        userNo: bet.amount?.toString() ?? undefined,
+        averageBuyPrice: bet.averageRatio.toString(),
       });
-    }
+      totalPortValue += bet.amount;
+    });
     setPortfolioValue(totalPortValue);
     for (var i = 0; i < dataArray.length; i++) {
       var question = allQuestions.find((item) => item.id == dataArray[i].id);
       dataArray[i].title = question!.title;
+      dataArray[i].description = question!.description;
+      dataArray[i].atitle = question!.aTitle;
+      dataArray[i].btitle = question!.bTitle;
       dataArray[i].imageHash = question!.imageHash;
       dataArray[i].totalAmount = question!.totalAmount;
       dataArray[i].totalYes = question!.totalYes;
       dataArray[i].totalNo = question!.totalNo!;
-      dataArray[i].hasResolved = question!.hasResolved;
-      dataArray[i].endTimestamp = question!.endTimestamp;
     }
-    setMarkets(dataArray);
+    setMarkets(orderBy(dataArray, ["id"], ["asc"]));
   }, [account, polymarket]);
 
   useEffect(() => {
@@ -121,25 +119,26 @@ const Portfolio = () => {
             <div className="flex flex-col items-center">
               <h1 className="text-white opacity-50 text-lg">Portfolio Value</h1>
               <h1 className="text-white text-4xl font-bold">
-                {Web3.utils.fromWei(portfolioValue.toString())} POLY
+                {Web3.utils.fromWei(portfolioValue.toString())} ETH
               </h1>
             </div>
           </div>
           <span className="font-bold my-3 text-lg">Your Market Positions</span>
           {markets.map((market) => (
             <PortfolioMarketCard
-              id={market.id}
+              id={market.id.toString()}
+              description={market.description!}
               title={market.title!}
+              aTitle={market.atitle!}
+              bTitle={market.btitle!}
               imageHash={market.imageHash!}
-              totalAmount={market.totalAmount!}
-              totalYes={market.totalYes!}
-              totalNo={market.totalNo!}
+              totalAmount={market.totalAmount!.toString()}
+              totalYes={market.totalYes!.toString()}
+              totalNo={market.totalNo!.toString()}
               userYes={market.userYes!}
               userNo={market.userNo!}
+              userAveragePrice={market.averageBuyPrice!}
               key={market.id!}
-              hasResolved={market.hasResolved!}
-              timestamp={market.timestamp!}
-              endTimestamp={market.endTimestamp!}
             />
           ))}
         </div>

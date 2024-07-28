@@ -1,4 +1,3 @@
-import { create } from "ipfs-http-client";
 import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -10,21 +9,12 @@ const Admin = () => {
   const router = useRouter();
   const { polymarket, loadWeb3, account } = useData!();
   const [loading, setLoading] = React.useState(false);
-  const client = create({ url: "https://ipfs.infura.io:5001/api/v0" });
 
   const [title, setTitle] = React.useState("");
+  const [optionATitle, setOptionATitle] = React.useState("");
+  const [optionBTitle, setOptionBTitle] = React.useState("");
   const [description, setDescription] = React.useState("");
   const [imageHash, setImageHash] = React.useState("");
-  const [resolverUrl, setResolverUrl] = React.useState("");
-  const [timestamp, setTimestamp] = React.useState<
-    string | number | readonly string[] | undefined
-  >(Date());
-
-  const uploadImage = async (e: any) => {
-    const file = e.target.files[0];
-    const added = await client.add(file);
-    setImageHash(added.path);
-  };
 
   useEffect(() => {
     loadWeb3();
@@ -33,7 +23,7 @@ const Admin = () => {
   const handleSubmit = async () => {
     setLoading(true);
     await polymarket.methods
-      .createQuestion(title, imageHash, description, resolverUrl, timestamp)
+      .addBet(title, optionATitle, optionBTitle, imageHash, description)
       .send({
         from: account,
       });
@@ -41,8 +31,8 @@ const Admin = () => {
     setTitle("");
     setDescription("");
     setImageHash("");
-    setResolverUrl("");
-    setTimestamp(undefined);
+    setOptionATitle("");
+    setOptionBTitle("");
     router.push("/");
   };
 
@@ -56,11 +46,6 @@ const Admin = () => {
         </Head>
         <Navbar />
         <main className="w-full flex flex-col py-4 max-w-5xl pb-6">
-          <Link href="/admin/markets">
-            <a className="mt-5 rounded-lg py-3 text-center w-full bg-blue-700 text-white font-bold mb-5">
-              See All Markets
-            </a>
-          </Link>
           <div className="w-full flex flex-col pt-1 border border-gray-300 p-5 rounded-lg ">
             <span className="text-lg font-semibold mt-4">Add New Market</span>
             <span className="text-lg font mt-6 mb-1">Market Title</span>
@@ -69,6 +54,26 @@ const Admin = () => {
               name="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              className="w-full py-3 px-3 text-base text-gray-700 bg-gray-100 rounded-md focus:outline-none"
+              placeholder="Title"
+              autoComplete="off"
+            />
+            <span className="text-lg font mt-6 mb-1">Option A Title</span>
+            <input
+              type="input"
+              name="optionATitle"
+              value={optionATitle}
+              onChange={(e) => setOptionATitle(e.target.value)}
+              className="w-full py-3 px-3 text-base text-gray-700 bg-gray-100 rounded-md focus:outline-none"
+              placeholder="Title"
+              autoComplete="off"
+            />
+            <span className="text-lg font mt-6 mb-1">Option B Title</span>
+            <input
+              type="input"
+              name="optionBTitle"
+              value={optionBTitle}
+              onChange={(e) => setOptionBTitle(e.target.value)}
               className="w-full py-3 px-3 text-base text-gray-700 bg-gray-100 rounded-md focus:outline-none"
               placeholder="Title"
               autoComplete="off"
@@ -82,27 +87,14 @@ const Admin = () => {
               placeholder="Description"
               autoComplete="off"
             ></textarea>
-            <span className="text-lg font mt-6 mb-1">Market Title Image</span>
-            <input type="file" onChange={uploadImage} />
-            <span className="text-lg font mt-6 mb-1">Resolve URL</span>
+            <span className="text-lg font mt-6 mb-1">Image Url</span>
             <input
               type="input"
-              name="resolverUrl"
-              value={resolverUrl}
-              onChange={(e) => setResolverUrl(e.target.value)}
+              name="imageHash"
+              value={imageHash}
+              onChange={(e) => setImageHash(e.target.value)}
               className="w-full py-3 px-3 text-base text-gray-700 bg-gray-100 rounded-md focus:outline-none"
-              placeholder="URL"
-              autoComplete="off"
-            />
-            <span className="text-lg font mt-6 mb-1">End Date</span>
-            <input
-              type="date"
-              name="timestamp"
-              // value={timestamp}
-              onChange={(e) => {
-                setTimestamp(e.target.valueAsDate?.getTime());
-              }}
-              className="w-full py-3 px-3 text-base text-gray-700 bg-gray-100 rounded-md focus:outline-none"
+              placeholder="url"
               autoComplete="off"
             />
             {loading ? (

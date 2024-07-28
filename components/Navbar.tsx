@@ -16,21 +16,25 @@ function Navbar() {
               Polymarket
             </span>
           </Link>
-          {!router.asPath.includes("/market") &&
-            !router.asPath.includes("/admin") && (
-              <div className="flex flex-row items-center justify-center h-full">
-                <TabButton
-                  title="Market"
-                  isActive={router.asPath === "/"}
-                  url={"/"}
-                />
-                <TabButton
-                  title="Portfolio"
-                  isActive={router.asPath === "/portfolio"}
-                  url={"/portfolio"}
-                />
-              </div>
-            )}
+          {!router.asPath.includes("/market") && (
+            <div className="flex flex-row items-center justify-center h-full">
+              <TabButton
+                title="Market"
+                isActive={router.asPath === "/"}
+                url={"/"}
+              />
+              <TabButton
+                title="Portfolio"
+                isActive={router.asPath === "/portfolio"}
+                url={"/portfolio"}
+              />
+              <TabButton
+                title="Admin"
+                isActive={router.asPath === "/admin"}
+                url={"/admin"}
+              />
+            </div>
+          )}
           {account ? (
             <div className="bg-green-500 px-6 py-2 rounded-md cursor-pointer">
               <span className="text-lg text-white">

@@ -40,7 +40,7 @@ export const Filter: React.FC<Props> = ({
             <div className="px-2 py-1">
               {list.map((item) => (
                 <Menu.Item key={item} onClick={() => onChange(item)}>
-                  {({ active }) => {
+                  {({ active }: any) => {
                     return (
                       <button
                         className={`${

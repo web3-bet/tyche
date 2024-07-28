@@ -16,14 +16,15 @@ export interface MarketProps {
   totalYes: number;
   totalNo: number;
   description: string;
-  endTimestamp: number;
-  resolverUrl: string;
+  titleA: string;
+  titleB: string;
+  settled: boolean;
 }
 
 const Details = () => {
   const router = useRouter();
   const { id } = router.query;
-  const { polymarket, account, loadWeb3, loading } = useData();
+  const { polymarket, account, loadWeb3, loading, getBetData } = useData();
   const [market, setMarket] = useState<MarketProps>();
   const [selected, setSelected] = useState<string>("YES");
   const [dataLoading, setDataLoading] = useState(true);
@@ -32,51 +33,80 @@ const Details = () => {
   const [input, setInput] = useState("");
 
   const getMarketData = useCallback(async () => {
-    const totalAAmount = await polymarket.methods.currentTotalAAmount().call();
-    const totalBAmount = await polymarket.methods.currentTotalBAmount().call();
+    const betData = await getBetData(parseInt(id as string));
+    console.log("betData222", betData);
     setMarket({
-      id: "123",
-      title: "title 1",
+      id: id as string,
+      title: betData.title,
       imageHash: "aabbcc",
-      totalAmount: parseInt(totalAAmount) + parseInt(totalBAmount),
-      totalYes: parseInt(totalAAmount),
-      totalNo: parseInt(totalBAmount),
+      totalAmount: betData.currentTotalAAmount + betData.currentTotalBAmount,
+      totalYes: betData.currentTotalAAmount,
+      totalNo: betData.currentTotalBAmount,
       description: "foo description",
-      endTimestamp: parseInt(new Date().getTime().toString()),
-      resolverUrl: "foo",
+      titleA: betData.optionATitle,
+      titleB: betData.optionBTitle,
+      settled: betData.closed,
     });
     setDataLoading(false);
+    if (betData.closed) {
+      setButton("Already Settled");
+    }
   }, [account, id, polymarket]);
 
+  const handleSettle = async (option: string) => {
+    setButton("Please wait");
+    setDataLoading(true);
+    try {
+      const receipt = await polymarket.methods
+        .settle(parseInt(id as string), option === "a")
+        .send({
+          from: account,
+          gas: 2000000, // Set an appropriate gas limit
+        });
+      console.log("Receipt: ", receipt);
+      await getMarketData();
+    } catch (err: any) {
+      alert("Error settling:" + err.toString());
+    } finally {
+      setButton("Trade");
+      setDataLoading(false);
+    }
+  };
   const handleTrade = async () => {
     setButton("Please wait");
-
-    if (Number.isNaN(parseInt(input)) || parseFloat(input) <= 0) {
-      throw new Error("Invalid input");
+    setDataLoading(true);
+    try {
+      if (Number.isNaN(parseInt(input)) || parseFloat(input) <= 0) {
+        throw new Error("Invalid input");
+      }
+      const inputWei = Web3.utils.toWei(input, "ether");
+      if (selected === "YES") {
+        const receipt = await polymarket.methods.bet(id, true).send({
+          from: account,
+          value: inputWei,
+          gas: 2000000, // Set an appropriate gas limit
+        });
+        console.log("Receipt: ", receipt);
+      } else if (selected === "NO") {
+        const receipt = await polymarket.methods.bet(id, false).send({
+          from: account,
+          value: inputWei,
+          gas: 2000000, // Set an appropriate gas limit
+        });
+        console.log("Receipt: ", receipt);
+      }
+      await getMarketData();
+    } catch (err: any) {
+      alert("Error trading:" + err.toString());
+    } finally {
+      setButton("Trade");
+      setDataLoading(false);
     }
-
-    if (selected === "YES") {
-      const receipt = await polymarket.methods.betA().send({
-        from: account,
-        value: input,
-        gas: 2000000, // Set an appropriate gas limit
-      });
-      console.log("Receipt: ", receipt);
-    } else if (input && selected === "NO") {
-      const receipt = await polymarket.methods.betB().send({
-        from: account,
-        value: input,
-        gas: 2000000, // Set an appropriate gas limit
-      });
-      console.log("Receipt: ", receipt);
-    }
-    await getMarketData();
-    setButton("Trade");
   };
 
   useEffect(() => {
     loadWeb3().then(() => {
-      if (!loading) getMarketData();
+      getMarketData();
     });
   }, [loading]);
 
@@ -100,16 +130,18 @@ const Details = () => {
             <div className="p-6 rounded-lg flex flex-row justify-start border border-gray-300">
               <div className="flex flex-row">
                 <div className="h-w-15 pr-4">
-                  <Img
-                    src={`https://ipfs.infura.io/ipfs/${market?.imageHash}`}
-                    className="rounded-full"
-                    width={55}
-                    height={55}
-                  />
+                  {market?.imageHash && market?.imageHash.length > 7 ? (
+                    <Img
+                      src={`${market?.imageHash}`}
+                      className="rounded-full"
+                      width={55}
+                      height={55}
+                    />
+                  ) : null}
                 </div>
                 <div className="flex flex-col justify-start w-1/2 space-y-1">
                   <span className="text-xs font-light text-gray-500 whitespace-nowrap">
-                    US curreny affairs
+                    Title:
                   </span>
                   <span className="text-lg font-semibold whitespace-nowrap">
                     {market?.title}
@@ -119,18 +151,6 @@ const Details = () => {
               <div className="flex flex-row items-center space-x-4 ml-3">
                 <div className="flex flex-col justify-start bg-gray-100 p-3">
                   <span className="text-xs font-light text-gray-500 whitespace-nowrap">
-                    Market End on
-                  </span>
-                  <span className="text-base font-semibold text-black whitespace-nowrap">
-                    {market?.endTimestamp
-                      ? moment(
-                          parseInt((market?.endTimestamp).toFixed(0))
-                        ).format("MMMM D, YYYY")
-                      : "N/A"}
-                  </span>
-                </div>
-                <div className="flex flex-col justify-start bg-gray-100 p-3">
-                  <span className="text-xs font-light text-gray-500 whitespace-nowrap">
                     Total Volume
                   </span>
                   <span className="text-base font-semibold text-black whitespace-nowrap">
@@ -138,7 +158,7 @@ const Details = () => {
                       market?.totalAmount.toString() ?? "0",
                       "ether"
                     ) ?? 0}{" "}
-                    POLY
+                    ETH
                   </span>
                 </div>
               </div>
@@ -161,14 +181,19 @@ const Details = () => {
                       } mt-2 cursor-pointer`}
                       onClick={() => setSelected("YES")}
                     >
-                      <span className="font-bold">YES</span>{" "}
+                      <span className="font-bold">{market?.titleA}</span>{" "}
                       {!market?.totalAmount
                         ? `0`
                         : (
                             (market?.totalYes * 100) /
                             market?.totalAmount
                           ).toFixed(2)}
-                      %
+                      %{"    ( "}
+                      {Web3.utils.fromWei(
+                        market?.totalYes.toString() ?? "0",
+                        "ether"
+                      ) ?? 0}
+                      {" ETH)"}
                     </div>
                     <div
                       className={`w-full py-2 px-2 ${
@@ -178,14 +203,19 @@ const Details = () => {
                       } mt-2 cursor-pointer`}
                       onClick={() => setSelected("NO")}
                     >
-                      <span className="font-bold">No</span>{" "}
+                      <span className="font-bold">{market?.titleB}</span>{" "}
                       {!market?.totalAmount
                         ? `0`
                         : (
                             (market?.totalNo * 100) /
                             market?.totalAmount
                           ).toFixed(2)}
-                      %
+                      %{"    ( "}
+                      {Web3.utils.fromWei(
+                        market?.totalNo.toString() ?? "0",
+                        "ether"
+                      ) ?? 0}
+                      {" ETH)"}
                     </div>
                     <span className="text-sm mt-5 mb-4">How much?</span>
                     <div className="w-full border border-gray-300 flex flex-row items-center">
@@ -199,7 +229,7 @@ const Details = () => {
                         autoComplete="off"
                       />
                       <span className="whitespace-nowrap text-sm font-semibold">
-                        POLY |{" "}
+                        ETH |{" "}
                       </span>
                       <span className="text-sm font-semibold text-blue-700 mx-2 underline cursor-pointer">
                         Max
@@ -216,16 +246,22 @@ const Details = () => {
                 </div>
               </div>
               <div className="w-2/3 flex flex-col">
-                <span className="text-base font-semibold py-3">
-                  Description
-                </span>
-                <span>{market?.description}</span>
-                <span className="text-base my-3 py-2 bg-gray-100 rounded-xl px-3">
-                  Resolution Source :{" "}
-                  <a className="text-blue-700" href={market?.resolverUrl}>
-                    {market?.resolverUrl}
-                  </a>
-                </span>
+                <button
+                  className="mt-5 rounded-lg py-3 text-center w-full bg-blue-700 text-white"
+                  onClick={() => handleSettle("a")}
+                  disabled={market?.settled}
+                >
+                  Settle A
+                </button>
+              </div>
+              <div className="w-2/3 flex flex-col">
+                <button
+                  className="mt-5 rounded-lg py-3 text-center w-full bg-blue-700 text-white"
+                  onClick={() => handleSettle("b")}
+                  disabled={market?.settled}
+                >
+                  Settle B
+                </button>
               </div>
             </div>
           </div>
