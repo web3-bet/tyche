@@ -49,7 +49,7 @@ const Details = () => {
     });
     setDataLoading(false);
     if (betData.closed) {
-      setButton("Already Settled");
+      setButton("Already Settled With Outcome: " + (betData.aWon ? "A" : "B"));
     }
   }, [account, id, polymarket]);
 
@@ -104,10 +104,14 @@ const Details = () => {
   };
 
   useEffect(() => {
-    loadWeb3().then(() => {
-      getMarketData();
-    });
+    loadWeb3();
   }, [loading]);
+
+  useEffect(() => {
+    if (polymarket) {
+      getMarketData();
+    }
+  }, [polymarket]);
 
   return (
     <div className="flex flex-col justify-center items-center h-full">
@@ -118,7 +122,7 @@ const Details = () => {
       </Head>
       <Navbar />
       <main className="w-full flex flex-col sm:flex-row py-4 max-w-5xl">
-        {dataLoading ? (
+        {dataLoading || loading ? (
           <div className="flex flex-col justify-center items-center h-full w-full pt-10">
             <div className="text-center">
               <div className="text-3xl font-bold">Loading...</div>
