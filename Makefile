@@ -4,5 +4,5 @@ dev:
 build:
 	yarn build
 
-serve:
+start:
 	yarn start
