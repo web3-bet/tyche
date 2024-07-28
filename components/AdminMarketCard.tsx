@@ -5,7 +5,7 @@ import Web3 from "web3";
 interface Props {
   id: string;
   title: string;
-  imageHash: string;
+  imageHash: string | null;
   totalAmount: number;
   onYes: () => void;
   onNo: () => void;

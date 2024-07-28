@@ -9,7 +9,7 @@ import styles from "../styles/Home.module.css";
 export interface MarketProps {
   id: string;
   title: string;
-  imageHash: string;
+  imageHash: string | null;
   totalAmount: number;
   totalYes: number;
   totalNo: number;

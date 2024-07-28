@@ -39,13 +39,14 @@ export const Filter: React.FC<Props> = ({
           <Menu.Items className="z-50 absolute left-0 w-56 mt-2 origin-top-left bg-white divide-y divide-gray-100 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
             <div className="px-2 py-1">
               {list.map((item) => (
-                <Menu.Item key={item} onClick={() => onChange(item)}>
+                <Menu.Item key={item}>
                   {({ active }: any) => {
                     return (
                       <button
                         className={`${
-                          activeItem === item && "bg-gray-200"
+                          activeItem === item ? "bg-gray-200" : ""
                         } font-medium group flex rounded-md items-center w-full px-3 py-2 text-sm text-gray-900 hover:bg-gray-200 my-1`}
+                        onClick={() => onChange(item)}
                       >
                         {item}
                       </button>

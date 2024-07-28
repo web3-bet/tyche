@@ -24,6 +24,9 @@ const Markets: React.FC = () => {
         totalAmount: data.totalAmount,
         totalYes: data.totalYesAmount,
         totalNo: data.totalNoAmount,
+        aTitle: data.optionATitle,
+        bTitle: data.optionBTitle,
+        description: data.description,
       });
     }
     setMarkets(dataArray);
