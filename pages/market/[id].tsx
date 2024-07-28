@@ -68,7 +68,6 @@ const Details = () => {
     } catch (err: any) {
       alert("Error settling:" + err.toString());
     } finally {
-      setButton("Trade");
       setDataLoading(false);
     }
   };
@@ -236,7 +235,9 @@ const Details = () => {
                       </span>
                     </div>
                     <button
-                      className="mt-5 rounded-lg py-3 text-center w-full bg-blue-700 text-white"
+                      className={`mt-5 rounded-lg py-3 text-center w-full ${
+                        market?.settled ? "bg-gray-700" : "bg-blue-700"
+                      } text-white`}
                       onClick={handleTrade}
                       disabled={button !== "Trade"}
                     >
@@ -247,7 +248,9 @@ const Details = () => {
               </div>
               <div className="w-2/3 flex flex-col">
                 <button
-                  className="mt-5 rounded-lg py-3 text-center w-full bg-blue-700 text-white"
+                  className={`mt-5 rounded-lg py-3 text-center w-full ${
+                    market?.settled ? "bg-gray-700" : "bg-blue-700"
+                  } text-white`}
                   onClick={() => handleSettle("a")}
                   disabled={market?.settled}
                 >
@@ -256,7 +259,9 @@ const Details = () => {
               </div>
               <div className="w-2/3 flex flex-col">
                 <button
-                  className="mt-5 rounded-lg py-3 text-center w-full bg-blue-700 text-white"
+                  className={`mt-5 rounded-lg py-3 text-center w-full ${
+                    market?.settled ? "bg-gray-700" : "bg-blue-700"
+                  } text-white`}
                   onClick={() => handleSettle("b")}
                   disabled={market?.settled}
                 >

@@ -5,136 +5,224 @@ pragma solidity >=0.7.0 <0.9.0;
 import "hardhat/console.sol";
 
 contract Owner {
+    uint8 FLOAT_BUFFER = 100;
     address private owner;
-    struct bet {
+
+    struct Bet {
         uint256 amount;
         uint256 averageRatio;
     }
 
-    mapping(address => bet) a_bets;
-    mapping(address => bet) b_bets;
-    address[] public a_bettors;
-    address[] public b_bettors;
+    struct UserBetResponse {
+        uint256 amount;
+        uint256 averageRatio;
+        uint256 betId;
+    }
 
-    uint256 public currentARatio = 5; //5 => 0.5, cannot be bigger than 10
-    uint256 public currentBRatio = 5; //5 => 0.5, cannot be bigger than 10
+    struct BetData {
+        uint256 currentARatio;
+        uint256 currentBRatio;
+        uint256 currentTotalAAmount;
+        uint256 currentTotalBAmount;
+        mapping(address => Bet) aBets;
+        mapping(address => Bet) bBets;
+        address[] aBettors;
+        address[] bBettors;
+        bool closed;
+        bool aWon;
+        string imageHash;
+        string title;
+        string description;
+        string optionATitle;
+        string optionBTitle;
+    }
 
-    uint256 public currentTotalAAmount = 0;
-    uint256 public currentTotalBAmount = 0;
+    mapping(uint256 => BetData) public bets;
+    uint256 public betCount = 0;
 
-    // modifier to check if caller is owner
     modifier isOwner() {
-        // If the first argument of 'require' evaluates to 'false', execution terminates and all
-        // changes to the state and to Ether balances are reverted.
-        // This used to consume all gas in old EVM versions, but not anymore.
-        // It is often a good idea to use 'require' to check if functions are called correctly.
-        // As a second argument, you can also provide an explanation about what went wrong.
         require(msg.sender == owner, "Caller is not owner");
         _;
     }
 
-    /**
-     * @dev Set contract deployer as owner
-     */
     constructor() {
         console.log("Owner contract deployed by:", msg.sender);
-        owner = msg.sender; // 'msg.sender' is sender of current call, contract deployer for a constructor
+        owner = msg.sender;
     }
 
-    function betA() external payable {
+    function addBet(
+        string calldata _title,
+        string calldata _optionATitle,
+        string calldata _optionBTitle,
+        string calldata imageHash,
+        string calldata description
+    ) external {
+        betCount++;
+        BetData storage newBet = bets[betCount];
+        newBet.currentARatio = 5;
+        newBet.currentBRatio = 5;
+        newBet.closed = false;
+        newBet.title = _title;
+        newBet.description = description;
+        newBet.imageHash = imageHash;
+        newBet.optionATitle = _optionATitle;
+        newBet.optionBTitle = _optionBTitle;
+    }
+
+    function bet(uint256 betId, bool onA) external payable {
         require(msg.value > 0, "You must send some Ether");
-        uint256 amount = msg.value * 10;
-        bet memory currentBet = a_bets[msg.sender];
-        // Check if the bet exists by checking if the amount is non-zero
-        if (currentBet.amount == 0) {
-            // Bet does not exist, handle accordingly
-            // Initialize the bet for the first time
-            a_bettors.push(msg.sender);
-            currentBet.amount = amount;
-            currentBet.averageRatio = currentARatio; // Or some other logic
-        } else {
-            // Bet exists, update accordingly
-            currentBet.averageRatio =
-                (currentBet.averageRatio *
-                    currentBet.amount +
-                    currentARatio *
-                    amount) /
-                (currentBet.amount + amount); // Example logic
-            currentBet.amount += amount;
-        }
-        currentTotalAAmount += amount;
-        currentARatio =
-            currentTotalAAmount /
-            (currentTotalAAmount + currentTotalBAmount);
-    }
+        require(betId > 0 && betId <= betCount, "Invalid bet ID");
+        require(!bets[betId].closed, "Bet is closed");
 
-    function betB() external payable {
-        require(msg.value > 0, "You must send some Ether");
-        uint256 amount = msg.value * 10;
-        bet memory currentBet = b_bets[msg.sender];
-        // Check if the bet exists by checking if the amount is non-zero
-        if (currentBet.amount == 0) {
-            // Bet does not exist, handle accordingly
-            // Initialize the bet for the first time
-            b_bettors.push(msg.sender);
-            currentBet.amount = amount;
-            currentBet.averageRatio = currentBRatio; // Or some other logic
-        } else {
-            // Bet exists, update accordingly
-            currentBet.averageRatio =
-                (currentBet.averageRatio *
-                    currentBet.amount +
-                    currentBRatio *
-                    amount) /
-                (currentBet.amount + amount); // Example logic
-            currentBet.amount += amount;
-        }
-        currentTotalBAmount += amount;
-        currentBRatio =
-            currentTotalBAmount /
-            (currentTotalAAmount + currentTotalBAmount);
-    }
+        BetData storage betData = bets[betId];
+        uint256 amount = msg.value * FLOAT_BUFFER;
 
-    function settleForA() external isOwner {
-        require(
-            currentTotalAAmount + currentTotalBAmount > 0,
-            "No funds to distribute"
-        );
-        uint256 totalAmount = (currentTotalAAmount + currentTotalBAmount);
-        uint256 totalWeight = 0;
-        for (uint256 i = 0; i < a_bettors.length; i++) {
-            address bettor = a_bettors[i];
-            bet memory b = a_bets[bettor];
-            totalWeight += (b.amount * 1) / b.averageRatio;
-        }
-        for (uint256 i = 0; i < a_bettors.length; i++) {
-            address bettor = a_bettors[i];
-            bet memory b = a_bets[bettor];
-            uint256 betterWeight = (b.amount * 1) / b.averageRatio;
-            payable(bettor).transfer(
-                totalAmount * (betterWeight / totalWeight)
+        if (onA) {
+            _betHelper(
+                betData.aBets,
+                betData.aBettors,
+                amount,
+                betData.currentARatio
             );
+            betData.currentTotalAAmount += amount;
+        } else {
+            _betHelper(
+                betData.bBets,
+                betData.bBettors,
+                amount,
+                betData.currentBRatio
+            );
+            betData.currentTotalBAmount += amount;
+        }
+        betData.currentARatio = ((FLOAT_BUFFER * betData.currentTotalAAmount) /
+            (betData.currentTotalAAmount + betData.currentTotalBAmount));
+        betData.currentBRatio = ((FLOAT_BUFFER * betData.currentTotalBAmount) /
+            (betData.currentTotalAAmount + betData.currentTotalBAmount));
+    }
+
+    function _betHelper(
+        mapping(address => Bet) storage selectedSideBets,
+        address[] storage bettors,
+        uint256 amount,
+        uint256 currentRatio
+    ) private {
+        Bet storage currentBet = selectedSideBets[msg.sender];
+        if (currentBet.amount == 0) {
+            bettors.push(msg.sender);
+            currentBet.amount = amount;
+            currentBet.averageRatio = currentRatio;
+        } else {
+            currentBet.averageRatio =
+                (currentBet.averageRatio *
+                    currentBet.amount +
+                    currentRatio *
+                    amount) /
+                (currentBet.amount + amount);
+            currentBet.amount += amount;
         }
     }
 
-    function settleForB() external isOwner {
-        require(
-            currentTotalAAmount + currentTotalBAmount > 0,
-            "No funds to distribute"
-        );
-        uint256 totalAmount = (currentTotalAAmount + currentTotalBAmount);
+    function getUserBets(bool sideA)
+        external
+        view
+        returns (UserBetResponse[] memory)
+    {
+        uint256 count = 0;
+
+        for (uint256 i = 1; i <= betCount; i++) {
+            // Changed betCount + 1 to betCount
+            BetData storage betData = bets[i];
+            Bet storage userBet;
+
+            if (sideA) {
+                userBet = betData.aBets[msg.sender];
+            } else {
+                userBet = betData.bBets[msg.sender];
+            }
+
+            if (userBet.amount > 0) {
+                count++;
+            }
+        }
+        console.log("Found %d bets for adress 0x%s", count, msg.sender);
+        UserBetResponse[] memory retval = new UserBetResponse[](count);
+        uint256 indx = 0;
+        for (uint256 i = 1; i <= betCount; i++) {
+            // Changed betCount + 1 to betCount
+            BetData storage betData = bets[i];
+            Bet storage userBet;
+
+            if (sideA) {
+                userBet = betData.aBets[msg.sender];
+            } else {
+                userBet = betData.bBets[msg.sender];
+            }
+            if (userBet.amount > 0) {
+                retval[indx] = UserBetResponse({
+                    amount: userBet.amount,
+                    averageRatio: userBet.averageRatio,
+                    betId: i
+                });
+                indx++;
+            }
+        }
+        return retval;
+    }
+
+    function getBetsA(address adress, uint256 betId)
+        external
+        view
+        returns (Bet memory)
+    {
+        BetData storage betData = bets[betId];
+        return betData.aBets[adress];
+    }
+
+    function getBetsB(address adress, uint256 betId)
+        external
+        view
+        returns (Bet memory)
+    {
+        BetData storage betData = bets[betId];
+        return betData.bBets[adress];
+    }
+
+    function settle(uint256 betId, bool aWon) external {
+        require(betId > 0 && betId <= betCount, "Invalid bet ID");
+        require(!bets[betId].closed, "Bet is already settled");
+
+        BetData storage betData = bets[betId];
+        uint256 totalAmount = betData.currentTotalAAmount +
+            betData.currentTotalBAmount;
+        require(totalAmount > 0, "No funds to distribute");
+
+        if (aWon) {
+            _settleHelper(betData.aBettors, betData.aBets, totalAmount);
+        } else {
+            _settleHelper(betData.bBettors, betData.bBets, totalAmount);
+        }
+
+        betData.closed = true;
+        betData.aWon = aWon;
+    }
+
+    function _settleHelper(
+        address[] storage bettors,
+        mapping(address => Bet) storage selectedSideBets,
+        uint256 totalAmount
+    ) private {
         uint256 totalWeight = 0;
-        for (uint256 i = 0; i < b_bettors.length; i++) {
-            address bettor = b_bettors[i];
-            bet memory b = b_bets[bettor];
+        for (uint256 i = 0; i < bettors.length; i++) {
+            address bettor = bettors[i];
+            Bet memory b = selectedSideBets[bettor];
             totalWeight += (b.amount * 1) / b.averageRatio;
         }
-        for (uint256 i = 0; i < b_bettors.length; i++) {
-            address bettor = b_bettors[i];
-            bet memory b = b_bets[bettor];
-            uint256 betterWeight = (b.amount * 1) / b.averageRatio;
+        for (uint256 i = 0; i < bettors.length; i++) {
+            address bettor = bettors[i];
+            Bet memory b = selectedSideBets[bettor];
+            uint256 bettorWeight = (b.amount * 1) / b.averageRatio;
             payable(bettor).transfer(
-                totalAmount * (betterWeight / totalWeight)
+                (totalAmount * bettorWeight) / totalWeight / FLOAT_BUFFER
             );
         }
     }

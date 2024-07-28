@@ -33,6 +33,7 @@ export type BetData = {
   currentTotalAAmount: number;
   currentTotalBAmount: number;
   closed: boolean;
+  aWon: boolean;
   imageHash: string | null;
   title: string;
   description: string;
@@ -156,7 +157,7 @@ export const useProviderData = () => {
 
       const bettingContract = new web3.eth.Contract(
         Betting,
-        "0x7f1B4ce6646CF867687141BcE181AAB73540CB56"
+        "0x78383c43d9b95ce9Cf376F379Fa8adE8e689FcC1"
       );
       setPolymarket(bettingContract);
     } catch (error) {
