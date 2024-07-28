@@ -160,7 +160,8 @@ export const useProviderData = () => {
 
       const bettingContract = new web3.eth.Contract(
         Betting,
-        "0x370D4C121079c507C2d279fD03F68205E0c516b0"
+        //"0x370D4C121079c507C2d279fD03F68205E0c516b0" // sepholia contract
+        "0x9F227D211f45f53697f9C6c32ef3eC7171e95f0C" // scroll sepholica contract
       );
       setPolymarket(bettingContract);
     } catch (error) {
