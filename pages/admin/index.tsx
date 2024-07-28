@@ -87,7 +87,7 @@ const Admin = () => {
               placeholder="Description"
               autoComplete="off"
             ></textarea>
-            <span className="text-lg font mt-6 mb-1">Image Url</span>
+            <span className="text-lg font mt-6 mb-1">Image Base64 Data</span>
             <input
               type="input"
               name="imageHash"
@@ -99,7 +99,7 @@ const Admin = () => {
             />
             {loading ? (
               <span className="text-center pt-5 pb-3 text-xl font-bold">
-                Loading...
+                Creating...
               </span>
             ) : (
               <button

@@ -55,7 +55,7 @@ export default function Home() {
     const load = async () => {
       try {
         await loadWeb3();
-        if (!loading) getMarkets();
+        getMarkets();
       } catch (err) {
         console.error("Error loading Web3:", err);
         setError("Failed to load Web3. Please try again later.");
